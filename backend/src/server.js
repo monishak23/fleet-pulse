@@ -9,6 +9,8 @@ import { authMiddleware, authRouter } from './auth.js';
 import { dataRouter } from './dataRoute.js';
 import { streamRouter, attachWebSocket, applyChaosChange } from './stream.js';
 import './generator.js';
+import { restChaos } from './restChaos.js';
+import { rulesRouter } from './rules.js';
 
 const app = new Koa();
 
@@ -24,6 +26,7 @@ app.use(async (ctx, next) => {
 // exposeHeaders lets the browser read Retry-After later (needed for 429 handling)
 app.use(cors({ exposeHeaders: ['Retry-After'] }));
 app.use(bodyParser());
+app.use(restChaos);
 app.use(authMiddleware);
 
 const router = new Router();
@@ -42,6 +45,7 @@ app.use(authRouter.routes()).use(authRouter.allowedMethods());
 app.use(dataRouter.routes()).use(dataRouter.allowedMethods());
 app.use(router.routes()).use(router.allowedMethods());
 app.use(streamRouter.routes()).use(streamRouter.allowedMethods());
+app.use(rulesRouter.routes()).use(rulesRouter.allowedMethods());
 
 export const server = http.createServer(app.callback());
 attachWebSocket(server);

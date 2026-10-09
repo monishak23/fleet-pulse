@@ -2,7 +2,7 @@ import Router from '@koa/router';
 import { WebSocketServer } from 'ws';
 import { verifyToken } from './auth.js';
 import { getChaos } from './chaos.js';
-import { apiError } from './errors.js';
+import { apiError } from './error.js';
 import { generatorEvents } from './generator.js';
 
 const PING_MS = 5000;
