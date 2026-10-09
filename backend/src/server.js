@@ -7,7 +7,7 @@ import { getChaos, mergeChaos, resetChaos } from './chaos.js';
 import { apiError } from './error.js';
 import { authMiddleware, authRouter } from './auth.js';
 import { dataRouter } from './dataRoute.js';
-import { streamRouter, attachWebSocket } from './stream.js';
+import { streamRouter, attachWebSocket, applyChaosChange } from './stream.js';
 import './generator.js';
 
 const app = new Koa();
@@ -29,8 +29,14 @@ app.use(authMiddleware);
 const router = new Router();
 router.get('/health', (ctx) => { ctx.body = { status: 'ok' }; });
 router.get('/chaos', (ctx) => { ctx.body = getChaos(); });
-router.post('/chaos', (ctx) => { ctx.body = mergeChaos(ctx.request.body); });
-router.delete('/chaos', (ctx) => { ctx.body = resetChaos(); });
+router.post('/chaos', (ctx) => {
+  ctx.body = mergeChaos(ctx.request.body);
+  applyChaosChange();
+});
+router.delete('/chaos', (ctx) => {
+  ctx.body = resetChaos();
+  applyChaosChange();
+});
 
 app.use(authRouter.routes()).use(authRouter.allowedMethods());
 app.use(dataRouter.routes()).use(dataRouter.allowedMethods());
