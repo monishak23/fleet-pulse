@@ -11,6 +11,7 @@ import { streamRouter, attachWebSocket, applyChaosChange } from './stream.js';
 import './generator.js';
 import { restChaos } from './restChaos.js';
 import { rulesRouter } from './rules.js';
+import { telemetryRouter } from './telemetry.js';
 
 const app = new Koa();
 
@@ -46,6 +47,7 @@ app.use(dataRouter.routes()).use(dataRouter.allowedMethods());
 app.use(router.routes()).use(router.allowedMethods());
 app.use(streamRouter.routes()).use(streamRouter.allowedMethods());
 app.use(rulesRouter.routes()).use(rulesRouter.allowedMethods());
+app.use(telemetryRouter.routes()).use(telemetryRouter.allowedMethods());
 
 export const server = http.createServer(app.callback());
 attachWebSocket(server);
