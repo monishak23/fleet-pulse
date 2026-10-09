@@ -7,6 +7,7 @@ import { getChaos, mergeChaos, resetChaos } from './chaos.js';
 import { apiError } from './error.js';
 import { authMiddleware, authRouter } from './auth.js';
 import { dataRouter } from './dataRoute.js';
+import { streamRouter, attachWebSocket } from './stream.js';
 import './generator.js';
 
 const app = new Koa();
@@ -34,6 +35,8 @@ router.delete('/chaos', (ctx) => { ctx.body = resetChaos(); });
 app.use(authRouter.routes()).use(authRouter.allowedMethods());
 app.use(dataRouter.routes()).use(dataRouter.allowedMethods());
 app.use(router.routes()).use(router.allowedMethods());
+app.use(streamRouter.routes()).use(streamRouter.allowedMethods());
 
 export const server = http.createServer(app.callback());
+attachWebSocket(server);
 server.listen(4000, () => console.log('mock backend on :4000'));
