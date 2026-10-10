@@ -1,23 +1,39 @@
+
 import { TestBed } from '@angular/core/testing';
 import { Observable, of, Subject, Subscriber } from 'rxjs';
 import { vi } from 'vitest';
+
 import { AuthService } from '../auth/service';
-import { APP_SETTINGS, DEFAULT_APP_SETTINGS } from '../config/app-settings';
-import { backoffDelayMs, ConnectionManager, STREAM_TRANSPORTS } from './connection-manager';
-import { StreamTransport, TransportError, TransportEvent, TransportKind } from './model';
+import {
+  APP_SETTINGS,
+  DEFAULT_APP_SETTINGS,
+} from '../config/app-settings';
+import {
+  backoffDelayMs,
+  ConnectionManager,
+  STREAM_TRANSPORTS,
+} from './connection-manager';
+import {
+  StreamTransport,
+  TransportError,
+  TransportEvent,
+  TransportKind,
+} from './model';
 
 const stream = DEFAULT_APP_SETTINGS.stream;
-const max = () => 1; // random at its highest: the delay equals the ceiling
-const min = () => 0; // random at its lowest: the delay is half the ceiling
+
+const max = () => 1;
+const min = () => 0;
+
+/* Backoff tests */
 
 describe('backoffDelayMs', () => {
   it('doubles with every failure', () => {
-    expect([1, 2, 3, 4].map((n) => backoffDelayMs(n, stream, max))).toEqual([
-      1000, 2000, 4000, 8000,
-    ]);
+    expect([1, 2, 3, 4].map((n) => backoffDelayMs(n, stream, max)))
+      .toEqual([1000, 2000, 4000, 8000]);
   });
 
-  it('never exceeds the cap, even after many failures', () => {
+  it('never exceeds the cap', () => {
     expect(backoffDelayMs(6, stream, max)).toBe(30_000);
     expect(backoffDelayMs(50, stream, max)).toBe(30_000);
   });
@@ -28,17 +44,19 @@ describe('backoffDelayMs', () => {
     expect(backoffDelayMs(3, stream, () => 0.5)).toBe(3000);
   });
 
-  it('treats 0 or a negative count as the first failure', () => {
+  it('treats zero or a negative count as the first failure', () => {
     expect(backoffDelayMs(0, stream, max)).toBe(1000);
     expect(backoffDelayMs(-3, stream, max)).toBe(1000);
   });
 });
 
-/** A transport the test controls by hand. `live` is null while nobody is subscribed. */
+/* A controllable transport for tests */
+
 class FakeTransport implements StreamTransport {
   connects = 0;
   tokens: string[] = [];
   live: Subscriber<TransportEvent> | null = null;
+
   constructor(readonly kind: TransportKind) {}
 
   connect(token: string): Observable<TransportEvent> {
@@ -46,19 +64,27 @@ class FakeTransport implements StreamTransport {
       this.connects++;
       this.tokens.push(token);
       this.live = subscriber;
-      return () => (this.live = null);
+
+      return () => {
+        this.live = null;
+      };
     });
   }
+
   open() {
     this.live?.next({ type: 'open' });
   }
+
   message(data: unknown) {
     this.live?.next({ type: 'message', data });
   }
+
   fail(code?: number) {
     this.live?.error(new TransportError(this.kind, 'boom', code));
   }
 }
+
+/* ConnectionManager tests */
 
 describe('ConnectionManager', () => {
   let ws: FakeTransport;
@@ -66,6 +92,7 @@ describe('ConnectionManager', () => {
   let polling: FakeTransport;
   let manager: ConnectionManager;
   let refresh$: Subject<string>;
+
   let auth: {
     refresh: ReturnType<typeof vi.fn>;
     ensureFreshToken: ReturnType<typeof vi.fn>;
@@ -73,15 +100,18 @@ describe('ConnectionManager', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.spyOn(Math, 'random').mockReturnValue(0); // delays: 500 ms, then 1000 ms, ...
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+
     ws = new FakeTransport('websocket');
     sse = new FakeTransport('sse');
     polling = new FakeTransport('polling');
     refresh$ = new Subject<string>();
+
     auth = {
       refresh: vi.fn(() => refresh$.asObservable()),
       ensureFreshToken: vi.fn(() => of('tok')),
     };
+
     TestBed.configureTestingModule({
       providers: [
         { provide: APP_SETTINGS, useValue: DEFAULT_APP_SETTINGS },
@@ -89,6 +119,7 @@ describe('ConnectionManager', () => {
         { provide: AuthService, useValue: auth },
       ],
     });
+
     manager = TestBed.inject(ConnectionManager);
   });
 
@@ -98,8 +129,12 @@ describe('ConnectionManager', () => {
     vi.useRealTimers();
   });
 
-  /** Fails the transport n times, letting each retry delay pass. */
-  function failTimes(transport: FakeTransport, n: number, waitMs = 2000) {
+  /** Fail a transport repeatedly, allowing retries to run. */
+  function failTimes(
+    transport: FakeTransport,
+    n: number,
+    waitMs = 2000,
+  ) {
     for (let i = 0; i < n; i++) {
       transport.fail();
       vi.advanceTimersByTime(waitMs);
@@ -109,6 +144,7 @@ describe('ConnectionManager', () => {
   describe('fallback', () => {
     it('starts on WebSocket and becomes live when it opens', () => {
       manager.start();
+
       expect(manager.transport()).toBe('websocket');
       expect(manager.phase()).toBe('connecting');
       expect(ws.tokens).toEqual(['tok']);
@@ -124,12 +160,14 @@ describe('ConnectionManager', () => {
 
       expect(manager.phase()).toBe('reconnecting');
       expect(manager.retryAt()).toBe(Date.now() + 500);
+
       vi.advanceTimersByTime(500);
+
       expect(ws.connects).toBe(2);
       expect(manager.phase()).toBe('connecting');
     });
 
-    it('falls back to SSE after 3 WebSocket failures in a row', () => {
+    it('falls back to SSE after three WebSocket failures', () => {
       manager.start();
       failTimes(ws, 3);
 
@@ -138,7 +176,7 @@ describe('ConnectionManager', () => {
       expect(manager.transport()).toBe('sse');
     });
 
-    it('falls back to polling after 3 SSE failures', () => {
+    it('falls back to polling after three SSE failures', () => {
       manager.start();
       failTimes(ws, 3);
       failTimes(sse, 3);
@@ -157,39 +195,67 @@ describe('ConnectionManager', () => {
       expect(polling.connects).toBe(6);
     });
 
-    it('counts a WebSocket that does not open within 5 s as a failure', () => {
+    it('counts a WebSocket that does not open within five seconds as a failure', () => {
       manager.start();
       vi.advanceTimersByTime(stream.wsConnectTimeoutMs);
 
       expect(manager.phase()).toBe('reconnecting');
-      expect(ws.live).toBeNull(); // the stuck socket was closed
+      expect(ws.live).toBeNull();
     });
 
     it('resets the failure count after a successful open', () => {
       manager.start();
       failTimes(ws, 2);
+
       ws.open();
       ws.fail();
+
       vi.advanceTimersByTime(2000);
 
-      expect(sse.connects).toBe(0); // 1 failure since the open, not 3
+      expect(sse.connects).toBe(0);
       expect(ws.connects).toBe(4);
     });
 
-    it('passes message payloads on, whatever the transport', () => {
-      const received: unknown[] = [];
-      manager.messages$.subscribe((m) => received.push(m));
-      manager.start();
-      ws.open();
-      ws.message('raw-1');
-      ws.message('raw-2');
+    it('passes validated message payloads through the parser', () => {
+      const metric = {
+        type: 'metric',
+        offset: 1,
+        serviceId: 'svc-1',
+        seq: 1,
+        ts: 123,
+        p95: 50,
+        errRate: 0.5,
+        rps: 10,
+        status: 'healthy',
+      };
 
-      expect(received).toEqual(['raw-1', 'raw-2']);
+      const received: unknown[] = [];
+      const subscription = manager.messages$.subscribe((message) => {
+        received.push(message);
+      });
+
+      // Start first so the fake transport has an active subscriber.
+      manager.start();
+
+      expect(ws.connects).toBe(1);
+
+      ws.message(JSON.stringify(metric));
+      ws.message(
+        JSON.stringify({ ...metric, offset: 2, seq: 2 }),
+      );
+
+      expect(received).toEqual([
+        metric,
+        { ...metric, offset: 2, seq: 2 },
+      ]);
+
+      subscription.unsubscribe();
     });
 
     it('stop closes the connection and cancels reconnects', () => {
       manager.start();
       ws.fail();
+
       manager.stop();
       vi.advanceTimersByTime(60_000);
 
@@ -205,20 +271,22 @@ describe('ConnectionManager', () => {
     it('treats missed pings on an open connection as dead', () => {
       manager.start();
       ws.open();
+
       vi.advanceTimersByTime(limit - 1);
       expect(manager.phase()).toBe('live');
 
       vi.advanceTimersByTime(1);
 
       expect(manager.phase()).toBe('reconnecting');
-      expect(ws.live).toBeNull(); // the half-open socket was closed
+      expect(ws.live).toBeNull();
     });
 
     it('resets the watchdog on every message', () => {
       manager.start();
       ws.open();
+
       for (let i = 0; i < 5; i++) {
-        vi.advanceTimersByTime(limit - 1_000);
+        vi.advanceTimersByTime(limit - 1000);
         ws.message(`ping-${i}`);
       }
 
@@ -229,6 +297,7 @@ describe('ConnectionManager', () => {
       manager.start();
       failTimes(ws, 3);
       failTimes(sse, 3);
+
       polling.open();
       vi.advanceTimersByTime(60_000);
 
@@ -242,10 +311,12 @@ describe('ConnectionManager', () => {
       auth.ensureFreshToken.mockReturnValue(token$.asObservable());
 
       manager.start();
+
       expect(ws.connects).toBe(0);
       expect(manager.phase()).toBe('connecting');
 
       token$.next('fresh');
+
       expect(ws.connects).toBe(1);
       expect(ws.tokens).toEqual(['fresh']);
     });
@@ -278,17 +349,21 @@ describe('ConnectionManager', () => {
       ws.fail(4401);
 
       expect(auth.refresh).toHaveBeenCalledTimes(1);
-      expect(ws.connects).toBe(1); // waiting for the refreshed token
+      expect(ws.connects).toBe(1);
+
       refresh$.next('new-token');
+
       expect(ws.connects).toBe(2);
 
-      failTimes(ws, 2); // two ordinary failures: still below the limit of 3
+      failTimes(ws, 2);
+
       expect(sse.connects).toBe(0);
     });
 
     it('refreshes only once in a row when the server keeps rejecting the token', () => {
       manager.start();
       ws.fail(4401);
+
       refresh$.next('new-token');
       ws.fail(4401);
 
@@ -299,6 +374,7 @@ describe('ConnectionManager', () => {
     it('treats a failed refresh after a rejected token as an ordinary failure', () => {
       manager.start();
       ws.fail(4401);
+
       refresh$.error(new Error('network'));
 
       expect(manager.phase()).toBe('reconnecting');

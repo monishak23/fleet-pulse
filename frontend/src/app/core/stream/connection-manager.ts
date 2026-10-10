@@ -6,6 +6,7 @@ import { StreamTransport, TransportError, TransportKind } from './model';
 import { PollingTransport } from './polling-transport';
 import { SseTransport } from './sse-transport';
 import { WebSocketTransport } from './websocket-transport';
+import { ParsedStreamEvent, StreamEventParser } from './stream-event-parser';
 
 /**
  * Delay before reconnect attempt number `failures` (1 = first retry).
@@ -56,6 +57,11 @@ export class ConnectionManager {
   private readonly transports = inject(STREAM_TRANSPORTS);
   private readonly auth = inject(AuthService);
 
+  private readonly parser = inject(StreamEventParser);
+
+private readonly out = new Subject<ParsedStreamEvent>();
+readonly messages$ = this.out.asObservable();
+
   private readonly _phase = signal<ConnectionPhase>('idle');
   private readonly _transport = signal<TransportKind | null>(null);
   private readonly _retryAt = signal<number | null>(null);
@@ -64,10 +70,6 @@ export class ConnectionManager {
   readonly transport = this._transport.asReadonly();
   /** When the next reconnect starts (epoch ms), for "Reconnecting in 4 s". */
   readonly retryAt = this._retryAt.asReadonly();
-
-  private readonly out = new Subject<unknown>();
-  /** Raw payloads of every message, whatever the transport. */
-  readonly messages$ = this.out.asObservable();
 
   private running = false;
   private level = 0; // index into transports
@@ -166,7 +168,11 @@ export class ConnectionManager {
             this.authRetried = false;
             this._phase.set('live');
           } else {
-            this.out.next(event.data);
+            const parsed = this.parser.parse(event.data);
+
+            if (parsed) {
+                this.out.next(parsed);
+            }
           }
           this.armHeartbeat(run); // open, metric or ping: the connection is alive
         },
