@@ -1,8 +1,4 @@
-import {
-  HttpErrorResponse,
-  HttpInterceptorFn,
-  HttpRequest,
-} from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { inject } from '@angular/core';
 import {
   catchError,
@@ -10,19 +6,22 @@ import {
   of,
   retry,
   switchMap,
+  takeUntil,
   throwError,
   timeout,
   timer,
   TimeoutError,
 } from 'rxjs';
 import { APP_SETTINGS, AppSettings } from '../config/app-settings';
-import { isTokenExpired } from '../http/error';
+import { isTokenExpired, isTokenInvalid, sessionEndedError } from '../http/error';
 import { AuthService } from './service';
 
+/** Status 0 means no response arrived (network error or our own timeout). */
 const NETWORK_ERROR = 0;
 
 export function isRetryableRequest(req: HttpRequest<unknown>): boolean {
   if (req.method === 'GET') return true;
+  // A POST is safe to repeat only if the server can de-duplicate it.
   return req.method === 'POST' && req.headers.has('Idempotency-Key');
 }
 
@@ -43,7 +42,7 @@ export function retryDelayMs(
     if (Number.isFinite(seconds) && seconds > 0) return seconds * 1000;
   }
   const backoff = http.retryBaseDelayMs * 2 ** (retryNumber - 1);
-  return backoff / 2 + Math.random() * (backoff / 2); 
+  return backoff / 2 + Math.random() * (backoff / 2); // jitter
 }
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
@@ -58,6 +57,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const withToken = (token: string) =>
     req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
 
+  // defer: runs again on every retry, so the token is read fresh each time.
   const attempt$ = defer(() => {
     const sentToken = auth.accessToken;
     if (!sentToken || isAuthEndpoint) {
@@ -65,6 +65,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     }
     return next(withToken(sentToken)).pipe(
       catchError((err: unknown) => {
+        if (isTokenInvalid(err)) {
+          auth.endSession(); // the server does not know this token: a refresh cannot help
+          return throwError(() => err);
+        }
         if (!isTokenExpired(err)) {
           return throwError(() => err);
         }
@@ -75,8 +79,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     );
   });
 
-  return attempt$.pipe(
+  const request$ = attempt$.pipe(
     timeout(http.timeoutMs),
+    // Treat our own timeout as a network failure so the retry rules apply.
     catchError((err: unknown) =>
       err instanceof TimeoutError
         ? throwError(
@@ -93,4 +98,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           : throwError(() => err),
     }),
   );
+
+  // If the session ends, this request is cancelled and fails with a "session ended" error.
+  // A notifier that errors makes takeUntil fail the request, which also cancels the HTTP call.
+  const sessionEnded$ = auth.sessionEnded$.pipe(
+    switchMap(() => throwError(() => sessionEndedError())),
+  );
+  return request$.pipe(takeUntil(sessionEnded$));
 };

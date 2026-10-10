@@ -7,12 +7,13 @@ import { AuthResponse, Session, User } from './model';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
+  private readonly settings = inject(APP_SETTINGS);
+
   private readonly ended = new Subject<void>();
   /** Emits when the session ends. In-flight requests and the stream listen to it. */
   readonly sessionEnded$ = this.ended.asObservable();
-  private readonly http = inject(HttpClient);
-  private readonly settings = inject(APP_SETTINGS);
 
   // Tokens live in memory only. A page reload means signing in again.
   private readonly session = signal<Session | null>(null);
@@ -62,22 +63,13 @@ export class AuthService {
           }
           return throwError(() => err);
         }),
-        finalize(() => (this.refreshInFlight$ = null)),
         finalize(() => (this.refreshInFlight$ = null)), // next expiry starts a fresh refresh
         shareReplay({ bufferSize: 1, refCount: false }),
       );
     return this.refreshInFlight$;
   }
 
-  applySession(res: AuthResponse): void {
-    this.session.set({
-      accessToken: res.accessToken,
-      refreshToken: res.refreshToken,
-      user: res.user,
-    });
-  }
-
-    /** The server rejected our credentials: clear everything and go to login. */
+  /** The server rejected our credentials: clear everything and go to login. */
   endSession(): void {
     if (!this.session()) return; // already ended, so emit only once
     this.session.set(null);
@@ -88,5 +80,13 @@ export class AuthService {
 
   logout(): void {
     this.endSession();
+  }
+
+  private applySession(res: AuthResponse): void {
+    this.session.set({
+      accessToken: res.accessToken,
+      refreshToken: res.refreshToken,
+      user: res.user,
+    });
   }
 }

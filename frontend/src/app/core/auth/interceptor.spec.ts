@@ -8,13 +8,14 @@ import {
 } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { EMPTY, Observable } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { EMPTY, NEVER, Observable } from 'rxjs';
 import { vi } from 'vitest';
 import { APP_SETTINGS, DEFAULT_APP_SETTINGS } from '../config/app-settings';
+import { isSessionEnded } from '../http/error';
 import { authInterceptor, isRetryableError, isRetryableRequest } from './interceptor';
 import { AuthResponse } from './model';
 import { AuthService } from './service';
-import { provideRouter } from '@angular/router';
 
 const base = DEFAULT_APP_SETTINGS.api.baseUrl;
 const user = { id: 'u-1', email: 'operator@pulse.dev', role: 'operator' as const };
@@ -26,6 +27,7 @@ const tokens = (access: string, refresh: string): AuthResponse => ({
 });
 const expired = { error: { code: 'token_expired', message: 'Access token expired', details: [] } };
 const refreshInvalid = { error: { code: 'refresh_invalid', message: 'Refresh token invalid', details: [] } };
+const tokenInvalid = { error: { code: 'token_invalid', message: 'Invalid', details: [] } };
 const unauthorized = { status: 401, statusText: 'Unauthorized' };
 
 describe('authInterceptor', () => {
@@ -94,15 +96,40 @@ describe('authInterceptor', () => {
     });
   });
 
-  it('fails every waiting request when the refresh is rejected', () => {
-    const errors: number[] = [];
+  it('stops every waiting request when the refresh is rejected', () => {
+    const errors: unknown[] = [];
     for (let i = 0; i < 3; i++) {
-      http.get(`${base}/services`).subscribe({ error: (e: { status: number }) => errors.push(e.status) });
+      http.get(`${base}/services`).subscribe({ error: (e: unknown) => errors.push(e) });
     }
     pending().forEach((r) => r.flush(expired, unauthorized));
 
     httpMock.expectOne(`${base}/auth/refresh`).flush(refreshInvalid, unauthorized);
-    expect(errors).toEqual([401, 401, 401]);
+    expect(errors.length).toBe(3);
+    expect(errors.every((e) => isSessionEnded(e))).toBe(true);
+  });
+
+  it('ends the session on token_invalid, without a refresh', () => {
+    const auth = TestBed.inject(AuthService);
+    let error: unknown;
+    http.get(`${base}/services`).subscribe({ error: (e: unknown) => (error = e) });
+
+    pending()[0].flush(tokenInvalid, unauthorized);
+
+    expect(httpMock.match(`${base}/auth/refresh`).length).toBe(0);
+    expect(auth.isAuthenticated()).toBe(false);
+    expect(isSessionEnded(error)).toBe(true);
+  });
+
+  it('stops in-flight requests when the session ends', () => {
+    const auth = TestBed.inject(AuthService);
+    let error: unknown;
+    http.get(`${base}/services`).subscribe({ error: (e: unknown) => (error = e) });
+    const [request] = pending();
+
+    auth.endSession();
+
+    expect(isSessionEnded(error)).toBe(true);
+    expect(request.cancelled).toBe(true);
   });
 });
 
@@ -148,7 +175,11 @@ describe('authInterceptor retry behaviour', () => {
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
         { provide: APP_SETTINGS, useValue: DEFAULT_APP_SETTINGS },
-        { provide: AuthService, useValue: { accessToken: 'tok', refresh: () => EMPTY } },
+        {
+          provide: AuthService,
+          // sessionEnded$ never emits here: these tests are not about logout.
+          useValue: { accessToken: 'tok', refresh: () => EMPTY, sessionEnded$: NEVER },
+        },
       ],
     });
     client = TestBed.inject(HttpClient);
