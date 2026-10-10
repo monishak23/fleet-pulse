@@ -34,6 +34,9 @@ export interface AppSettings {
   ui: {
     batchIntervalMs: number; // my choice: how often buffered events are applied to the UI
   };
+  auth: {
+    tokenExpiryMarginMs: number; // my choice: refresh a token that expires within this time before opening a stream
+  };
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -69,6 +72,9 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   },
   ui: {
     batchIntervalMs: 250,
+  },
+  auth: {
+    tokenExpiryMarginMs: 2_000,
   },
 };
 

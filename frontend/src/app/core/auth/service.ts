@@ -1,7 +1,17 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { catchError, finalize, map, Observable, shareReplay, Subject, tap, throwError } from 'rxjs';
+import {
+  catchError,
+  finalize,
+  map,
+  Observable,
+  of,
+  shareReplay,
+  Subject,
+  tap,
+  throwError,
+} from 'rxjs';
 import { APP_SETTINGS } from '../config/app-settings';
 import { AuthResponse, Session, User } from './model';
 
@@ -24,6 +34,7 @@ export class AuthService {
   readonly user = computed<User | null>(() => this.session()?.user ?? null);
   readonly isAuthenticated = computed(() => this.session() !== null);
   readonly role = computed(() => this.user()?.role ?? null);
+  readonly canEdit = computed(() => this.role() === 'operator');
 
   get accessToken(): string | null {
     return this.session()?.accessToken ?? null;
@@ -69,6 +80,15 @@ export class AuthService {
     return this.refreshInFlight$;
   }
 
+  /** A token that stays valid for at least `marginMs`. Refreshes first if it is about to expire. */
+  ensureFreshToken(marginMs: number): Observable<string> {
+    const current = this.session();
+    if (!current) {
+      return throwError(() => new Error('No session'));
+    }
+    return current.expiresAt - Date.now() > marginMs ? of(current.accessToken) : this.refresh();
+  }
+
   /** The server rejected our credentials: clear everything and go to login. */
   endSession(): void {
     if (!this.session()) return; // already ended, so emit only once
@@ -86,6 +106,7 @@ export class AuthService {
     this.session.set({
       accessToken: res.accessToken,
       refreshToken: res.refreshToken,
+      expiresAt: Date.now() + res.expiresIn * 1000,
       user: res.user,
     });
   }
