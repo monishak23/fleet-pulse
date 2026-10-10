@@ -10,6 +10,7 @@ export interface AppSettings {
     timeoutMs: number; // brief: every request has a 10 s timeout
     maxAttempts: number; // brief: at most 3 attempts
     retryableStatuses: readonly number[]; // brief: 502, 503, 504, 429 (plus network errors)
+    retryBaseDelayMs: number; // brief: 500 ms base delay for exponential backoff
   };
   stream: {
     wsConnectTimeoutMs: number; // brief: WS must connect within 5 s
@@ -42,9 +43,10 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
     sseUrl: 'http://localhost:4000/stream/sse',
   },
   http: {
-    timeoutMs: 10_000,
+    timeoutMs: 10000,
     maxAttempts: 3,
     retryableStatuses: [429, 502, 503, 504],
+    retryBaseDelayMs: 500,
   },
   stream: {
     wsConnectTimeoutMs: 5_000,
