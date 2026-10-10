@@ -36,3 +36,17 @@
     color: var(--mat-sys-on-surface);
   }
 }
+
+nav {
+  margin-left: 1.5rem;
+  display: flex;
+  gap: 0.25rem;
+}
+
+nav a {
+  color: var(--mat-sys-on-primary);
+}
+
+nav a.active {
+  background: color-mix(in srgb, var(--mat-sys-on-primary) 18%, transparent);
+}

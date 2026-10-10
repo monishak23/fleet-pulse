@@ -3,6 +3,22 @@
 <header class="app-header">
   <mat-toolbar>
     <span class="brand">Fleet Pulse</span>
+    <nav aria-label="Main">
+      <a
+        mat-button
+        routerLink="/"
+        routerLinkActive="active"
+        ariaCurrentWhenActive="page"
+        [routerLinkActiveOptions]="{ exact: true }"
+        >Fleet</a
+      >
+      <a mat-button routerLink="/rules" routerLinkActive="active" ariaCurrentWhenActive="page"
+        >Rules</a
+      >
+      <a mat-button routerLink="/settings" routerLinkActive="active" ariaCurrentWhenActive="page"
+        >Settings</a
+      >
+    </nav>
     <span class="spacer"></span>
     <!-- connection status indicator goes here in chunk 22 -->
   </mat-toolbar>
