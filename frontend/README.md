@@ -1,59 +1,93 @@
-# Frontend
+# Fleet Pulse
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.2.
+Fleet Pulse is an Angular dashboard for monitoring a 2,000-service fleet. It uses the mock API and stream server in `../backend`.
 
-## Development server
+## Run locally
 
-To start a local development server, run:
+Start the API:
 
-```bash
-ng serve
+```powershell
+cd backend
+npm ci
+npm start
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+In another terminal, run the frontend:
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
+```powershell
+cd frontend
+npm ci
+npm start
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Open `http://localhost:4200`. Demo accounts (both use password `pulse123`):
 
-```bash
-ng generate --help
+| Role     | Email                |
+| -------- | -------------------- |
+| Operator | `operator@pulse.dev` |
+| Viewer   | `viewer@pulse.dev`   |
+
+Tokens are held in memory; refreshing the page requires signing in again.
+
+## Features
+
+- Virtualized fleet table with URL-backed search, status filters, and sorting. Only the visible range plus a bounded buffer is rendered.
+- Service detail history with a 300-point maximum, live metric updates, stale-data notice, and retryable history errors.
+- Operator-only alert-rule creation and editing, including dynamic conditions, cross-field validation, asynchronous name checks, optimistic persistence with rollback, and active incident evaluation.
+- Optional browser notifications. Grant permission on the Rules page and enable them in Settings.
+- Local browser preferences for compact rows and stale-data threshold.
+- Live connection state in the app toolbar with an `aria-live` announcement.
+
+## Tests and quality checks
+
+```powershell
+npm test -- --watch=false
+npm run lint
+npm run build
 ```
 
-## Building
+The tests cover the auth and stream pipeline, rule condition evaluation, and the virtual fleet rendering limit.
 
-To build the project run:
+## 4x CPU-throttle performance check
 
-```bash
-ng build
+1. Start the local backend and frontend, sign in as the operator, and open the Fleet page.
+2. Open Chrome DevTools **Performance**, set CPU throttling to **4x slowdown**, and begin a 30-second recording.
+3. In DevTools Console, set the generator rate to 2,000 events/second:
+
+   ```js
+   fetch('http://localhost:4000/chaos', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({ rate: 2000 }),
+   });
+   ```
+
+4. Confirm the **Fleet** page continues to respond, the toolbar connection remains live, and the UI presents batched updates rather than repainting once per event. In the console, measure the rendered row count:
+
+   ```js
+   document.querySelectorAll('.service-viewport tbody tr').length;
+   ```
+
+   The count must remain below 60 while the service count remains 2,000. The stream store applies updates on the configured 250 ms UI batch interval.
+
+5. Reset the mock server after recording:
+
+   ```js
+   fetch('http://localhost:4000/chaos', { method: 'DELETE' });
+   ```
+
+Record the browser/OS, 4x setting, event rate, row count, and any long tasks when reporting a performance run. The mock stream rate can be adjusted with the backend `/chaos` endpoint.
+
+### Measured smoke run
+
+In the current Chromium workspace, a 30-second run at **4x CPU slowdown** and **2,000 events/second** kept the connection live with all 2,000 services loaded. The maximum rendered virtual-table row count sampled every 100 ms was **23** (requirement: fewer than 60). The browser reported 27 long tasks totaling 3.281 seconds over the run; repeat measurements on the target hardware before using this as a production performance baseline.
+
+## Docker Compose
+
+From the repository root:
+
+```powershell
+docker compose up --build
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Open `http://localhost:8080`. The frontend container serves the Angular app through Nginx, and the API remains available at `http://localhost:4000` to the browser. Stop the stack with `docker compose down`.
