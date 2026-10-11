@@ -1,0 +1,145 @@
+:host {
+  display: block;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 1.25rem;
+}
+
+.detail-heading,
+.history-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.detail-heading h1,
+.history-panel h2,
+.detail-heading p,
+.history-panel p {
+  margin: 0;
+}
+
+.eyebrow,
+.history-panel header p {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.status {
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  font-weight: 700;
+  text-transform: capitalize;
+
+  &.healthy {
+    background: #e1f4e8;
+    color: #176b35;
+  }
+  &.degraded {
+    background: #fff0cf;
+    color: #754d00;
+  }
+  &.down {
+    background: #ffe3e0;
+    color: #9b241c;
+  }
+}
+
+.stale-notice {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid #a96b00;
+  background: #fff7e5;
+  color: #583a00;
+}
+
+.metric-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+
+  article {
+    display: grid;
+    gap: 0.5rem;
+    padding: 1.25rem;
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: 0.65rem;
+    background: var(--mat-sys-surface-container);
+  }
+
+  span {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  strong {
+    font-size: 1.6rem;
+  }
+}
+
+.history-panel {
+  padding: 1.25rem;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 0.65rem;
+}
+
+.history-panel > header {
+  margin-bottom: 1rem;
+}
+
+.history-panel label {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.history-panel select {
+  padding: 0.5rem;
+  color: inherit;
+  background: var(--mat-sys-surface);
+}
+
+.chart {
+  width: 100%;
+  min-height: 180px;
+}
+
+.axis {
+  fill: none;
+  stroke: var(--mat-sys-outline-variant);
+}
+
+.line {
+  fill: none;
+  stroke: var(--mat-sys-primary);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-caption {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.85rem;
+}
+
+.chart-placeholder {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  background: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.error-panel {
+  padding: 1rem;
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+}
+
+@media (max-width: 640px) {
+  .metric-cards {
+    grid-template-columns: 1fr;
+  }
+}

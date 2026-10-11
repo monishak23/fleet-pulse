@@ -1,1 +1,79 @@
-<p>service-detail works!</p>
+<section class="detail-page">
+  <a class="back-link" routerLink="/">← Back to fleet</a>
+  @if (service(); as current) {
+    <header class="detail-heading">
+      <div>
+        <p class="eyebrow">{{ current.team }} · {{ current.id }}</p>
+        <h1>{{ current.name }}</h1>
+      </div>
+      <span class="status" [class]="current.status">{{ current.status }}</span>
+    </header>
+
+    @if (stale()) {
+      <p class="stale-notice" role="status">
+        Metric data is stale. Last update {{ current.ts | date: 'mediumTime' }}.
+      </p>
+    }
+
+    <section class="metric-cards" aria-label="Current service metrics">
+      <article>
+        <span>P95 latency</span><strong>{{ current.p95 | number: '1.0-0' }} ms</strong>
+      </article>
+      <article>
+        <span>Error rate</span><strong>{{ current.errRate | number: '1.1-1' }}%</strong>
+      </article>
+      <article>
+        <span>Requests per second</span><strong>{{ current.rps | number: '1.0-0' }}</strong>
+      </article>
+    </section>
+
+    <section class="history-panel">
+      <header>
+        <div>
+          <h2>Metric history</h2>
+          <p>Recent history · up to 300 displayed points</p>
+        </div>
+        <label>
+          <span>Metric</span>
+          <select [value]="metric()" (change)="selectMetric($event)">
+            <option value="p95">P95 latency</option>
+            <option value="errRate">Error rate</option>
+            <option value="rps">Requests per second</option>
+          </select>
+        </label>
+      </header>
+      @if (error()) {
+        <div class="error-panel" role="alert">
+          <p>{{ error() }}</p>
+          <button type="button" (click)="retry()">Retry</button>
+        </div>
+      } @else if (loading()) {
+        <p role="status">Loading history…</p>
+      } @else {
+        @defer (on viewport) {
+          <svg
+            class="chart"
+            viewBox="0 0 1000 220"
+            role="img"
+            [attr.aria-label]="metric() + ' history chart'"
+          >
+            <path class="axis" d="M 0 20 V 190 H 1000" />
+            <path class="line" [attr.d]="chartPath()" />
+          </svg>
+          <p class="chart-caption">
+            {{ history().length }} points across the configured history window
+          </p>
+        } @placeholder {
+          <div class="chart-placeholder" aria-hidden="true">Chart will load when visible</div>
+        }
+      }
+    </section>
+  } @else if (fleet.loading()) {
+    <p role="status">Loading service…</p>
+  } @else {
+    <section class="error-panel" role="alert">
+      <h1>Service not found</h1>
+      <p>This service is not available in the current fleet.</p>
+    </section>
+  }
+</section>

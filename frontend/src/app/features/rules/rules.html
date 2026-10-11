@@ -1,1 +1,167 @@
-<p>rules works!</p>
+<section class="rules-page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">Detection</p>
+      <h1>Alert rules</h1>
+      <p>Define metric thresholds and review active incidents.</p>
+    </div>
+    @if (auth.canEdit()) {
+      <button type="button" class="secondary" (click)="enableNotifications()">
+        Enable browser notifications
+      </button>
+    }
+  </header>
+
+  @if (error() || monitor.error()) {
+    <div class="error" role="alert">
+      <span>{{ error() || monitor.error() }}</span>
+      @if (monitor.error()) {
+        <button type="button" class="secondary" (click)="monitor.retry()">
+          Retry loading rules
+        </button>
+      }
+    </div>
+  }
+
+  <section class="panel incidents" aria-labelledby="incidents-heading">
+    <header>
+      <h2 id="incidents-heading">Active incidents</h2>
+      <span>{{ monitor.incidents().length }}</span>
+    </header>
+    @if (monitor.incidents().length) {
+      <ul>
+        @for (incident of monitor.incidents(); track incident.key) {
+          <li>
+            <span class="incident-state" [class]="incident.status">{{ incident.status }}</span>
+            <a [routerLink]="['/services', incident.serviceId]">{{ incident.serviceId }}</a>
+            <strong>{{ incident.ruleName }}</strong>
+            <time [attr.datetime]="incident.openedAt | date: 'yyyy-MM-ddTHH:mm:ss'">
+              Since {{ incident.openedAt | date: 'shortTime' }}
+            </time>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="muted" aria-live="polite">No active incidents.</p>
+    }
+  </section>
+
+  @if (auth.canEdit()) {
+    <section class="panel editor" aria-labelledby="editor-heading">
+      <h2 id="editor-heading">{{ editingId() ? 'Edit rule' : 'Create a rule' }}</h2>
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <label class="name-field">
+          <span>Rule name</span>
+          <input formControlName="name" maxlength="80" autocomplete="off" />
+          @if (form.controls.name.touched && form.controls.name.hasError('required')) {
+            <small class="field-error">Enter a name.</small>
+          } @else if (form.controls.name.hasError('nameTaken')) {
+            <small class="field-error">A rule already uses this name.</small>
+          } @else if (form.controls.name.hasError('nameCheckFailed')) {
+            <small class="field-error">Could not verify the name. Try again.</small>
+          }
+        </label>
+
+        <fieldset formArrayName="conditions">
+          <legend>Conditions (all must match)</legend>
+          @for (condition of conditions.controls; track $index; let i = $index) {
+            <div class="condition-row" [formGroupName]="i">
+              <label>
+                <span>Metric</span>
+                <select formControlName="metric">
+                  <option value="p95">P95 latency (ms)</option>
+                  <option value="errRate">Error rate (%)</option>
+                  <option value="rps">Requests/s</option>
+                </select>
+              </label>
+              <label>
+                <span>Operator</span>
+                <select formControlName="operator">
+                  <option value=">">&gt;</option>
+                  <option value=">=">&gt;=</option>
+                  <option value="<">&lt;</option>
+                  <option value="<=">&lt;=</option>
+                </select>
+              </label>
+              <label>
+                <span>Threshold</span>
+                <input type="number" formControlName="threshold" min="0" />
+              </label>
+              <label>
+                <span>For (seconds)</span>
+                <input type="number" formControlName="durationSec" min="0" />
+              </label>
+              <button
+                type="button"
+                class="icon-button"
+                [disabled]="conditions.length === 1"
+                (click)="removeCondition(i)"
+                [attr.aria-label]="'Remove condition ' + (i + 1)"
+              >
+                Remove
+              </button>
+            </div>
+            @if (condition.hasError('thresholdOutOfRange')) {
+              <small class="field-error">Error rate thresholds cannot exceed 100%.</small>
+            }
+          }
+          @if (conditions.hasError('duplicateMetric')) {
+            <small class="field-error">Each metric can be used only once per rule.</small>
+          }
+        </fieldset>
+        <div class="form-actions">
+          <button type="button" class="secondary" (click)="addCondition()">Add condition</button>
+          <button type="submit" [disabled]="pending() || form.pending">
+            {{ pending() ? 'Saving…' : editingId() ? 'Save changes' : 'Create rule' }}
+          </button>
+          @if (editingId()) {
+            <button type="button" class="secondary" (click)="cancelEdit()">Cancel</button>
+          }
+        </div>
+      </form>
+    </section>
+  }
+
+  <section class="panel" aria-labelledby="rules-heading">
+    <h2 id="rules-heading">Configured rules</h2>
+    @if (monitor.loading()) {
+      <p role="status">Loading rules…</p>
+    } @else if (monitor.rules().length) {
+      <ul class="rule-list">
+        @for (rule of monitor.rules(); track rule.id) {
+          <li>
+            <div class="rule-copy">
+              <strong>{{ rule.name }}</strong>
+              <span>{{ formatConditions(rule.conditions) }}</span>
+            </div>
+            @if (auth.canEdit()) {
+              <div class="rule-actions">
+                <button
+                  type="button"
+                  class="secondary"
+                  [disabled]="savingRuleId() === rule.id"
+                  (click)="toggle(rule)"
+                >
+                  {{ rule.enabled === false ? 'Enable' : 'Disable' }}
+                </button>
+                <button type="button" class="secondary" (click)="startEdit(rule)">Edit</button>
+                <button
+                  type="button"
+                  class="danger"
+                  [disabled]="savingRuleId() === rule.id"
+                  (click)="delete(rule)"
+                >
+                  Delete
+                </button>
+              </div>
+            } @else {
+              <span class="muted">{{ rule.enabled === false ? 'Disabled' : 'Enabled' }}</span>
+            }
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="muted">No rules have been created yet.</p>
+    }
+  </section>
+</section>
