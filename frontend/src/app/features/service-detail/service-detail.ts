@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Color, NgxChartsModule, ScaleType } from '@swimlane/ngx-charts';
 import { APP_SETTINGS } from '../../core/config/app-settings';
 import { FleetService } from '../../core/fleet/fleet-service';
 import { UiPreferencesService } from '../../core/preferences/ui-preferences';
@@ -25,8 +26,22 @@ interface HistoryPoint {
 
 type ChartMetric = 'p95' | 'errRate' | 'rps';
 
+interface ChartPanel {
+  key: ChartMetric;
+  title: string;
+  unit: string;
+  scheme: Color;
+}
+
+const scheme = (color: string): Color => ({
+  name: color,
+  selectable: false,
+  group: ScaleType.Ordinal,
+  domain: [color],
+});
+
 @Component({
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, NgxChartsModule],
   selector: 'app-service-detail',
   styleUrl: './service-detail.scss',
   templateUrl: './service-detail.html',
@@ -41,8 +56,12 @@ export class ServiceDetail {
   protected readonly preferences = inject(UiPreferencesService);
   private readonly ruleMonitor = inject(RuleMonitor);
   private readonly historyRequests = new Subject<string>();
+
+  // The template cannot read the private `settings`, so expose just these two values.
+  protected readonly historyMinutes = this.settings.charts.historyMinutes;
+  protected readonly maxPoints = this.settings.charts.maxPointsPerSeries;
+
   protected readonly serviceId = signal('');
-  protected readonly metric = signal<ChartMetric>('p95');
   protected readonly history = signal<readonly HistoryPoint[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
@@ -54,7 +73,34 @@ export class ServiceDetail {
     const current = this.service();
     return !!current && this.now() - current.ts > this.preferences.value().staleAfterSeconds * 1000;
   });
-  protected readonly chartPath = computed(() => this.makePath(this.metric()));
+
+  /** The three charts the brief asks for. */
+  protected readonly panels: readonly ChartPanel[] = [
+    { key: 'p95', title: 'P95 latency', unit: 'ms', scheme: scheme('#575d7b') },
+    { key: 'errRate', title: 'Error rate', unit: '%', scheme: scheme('#9b241c') },
+    { key: 'rps', title: 'Requests per second', unit: 'req/s', scheme: scheme('#176b35') },
+  ];
+
+  /** One series per chart. A Date as the point name makes ngx-charts use a time axis. */
+  protected readonly charts = computed(() => {
+    const points = this.history();
+    const last = points.at(-1);
+    return this.panels.map((panel) => ({
+      panel,
+      results: [
+        {
+          name: panel.title,
+          series: points.map((point) => ({ name: new Date(point.ts), value: point[panel.key] })),
+        },
+      ],
+      label: last
+        ? `${panel.title} over time. Latest value ${last[panel.key]} ${panel.unit}.`
+        : `${panel.title} over time. No data yet.`,
+    }));
+  });
+
+  protected readonly formatTime = (value: Date): string =>
+    value.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
   constructor() {
     const clock = setInterval(() => this.now.set(Date.now()), 1000);
@@ -68,12 +114,7 @@ export class ServiceDetail {
       this.history.update((points) =>
         this.reducePoints([
           ...points,
-          {
-            ts: latest.ts,
-            p95: latest.p95,
-            errRate: latest.errRate,
-            rps: latest.rps,
-          },
+          { ts: latest.ts, p95: latest.p95, errRate: latest.errRate, rps: latest.rps },
         ]),
       );
     });
@@ -86,12 +127,7 @@ export class ServiceDetail {
         const merged = [...points];
         const current = this.service();
         if (current && current.ts > (merged.at(-1)?.ts ?? 0)) {
-          merged.push({
-            ts: current.ts,
-            p95: current.p95,
-            errRate: current.errRate,
-            rps: current.rps,
-          });
+          merged.push({ ts: current.ts, p95: current.p95, errRate: current.errRate, rps: current.rps });
         }
         this.history.set(this.reducePoints(merged));
       });
@@ -114,24 +150,13 @@ export class ServiceDetail {
     if (id) this.historyRequests.next(id);
   }
 
-  protected selectMetric(event: Event): void {
-    const select = event.target;
-    if (!(select instanceof HTMLSelectElement)) return;
-    this.metric.set(select.value as ChartMetric);
-  }
-
   private fetchHistory(id: string) {
     this.loading.set(true);
     this.error.set(null);
     return this.http
       .get<{ serviceId: string; points: HistoryPoint[] }>(
         `${this.settings.api.baseUrl}/metrics/history`,
-        {
-          params: {
-            serviceId: id,
-            minutes: this.settings.charts.historyMinutes,
-          },
-        },
+        { params: { serviceId: id, minutes: this.historyMinutes } },
       )
       .pipe(
         map((response) => response.points),
@@ -145,27 +170,12 @@ export class ServiceDetail {
   }
 
   private reducePoints(points: readonly HistoryPoint[]): readonly HistoryPoint[] {
-    const max = this.settings.charts.maxPointsPerSeries;
+    const max = this.maxPoints;
     if (points.length <= max) return points;
     const reduced: HistoryPoint[] = [];
     for (let i = 0; i < max; i++) {
       reduced.push(points[Math.round((i * (points.length - 1)) / (max - 1))]);
     }
     return reduced;
-  }
-
-  private makePath(metric: ChartMetric): string {
-    const points = this.history();
-    if (points.length < 2) return '';
-    const values = points.map((point) => point[metric]);
-    const min = Math.min(...values);
-    const range = Math.max(1, Math.max(...values) - min);
-    return values
-      .map((value, index) => {
-        const x = (index / (values.length - 1)) * 1000;
-        const y = 190 - ((value - min) / range) * 170;
-        return `${index ? 'L' : 'M'} ${x.toFixed(1)} ${y.toFixed(1)}`;
-      })
-      .join(' ');
   }
 }

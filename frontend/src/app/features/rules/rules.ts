@@ -162,23 +162,6 @@ export class Rules {
     });
   }
 
-  protected async enableNotifications(): Promise<void> {
-    if (typeof Notification === 'undefined') {
-      this.error.set('Browser notifications are not available in this browser.');
-      return;
-    }
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission !== 'granted') {
-        this.error.set('Notification permission was not granted.');
-        return;
-      }
-      this.error.set(null);
-    } catch {
-      this.error.set('Could not request browser notification permission.');
-    }
-  }
-
   protected formatConditions(conditions: readonly RuleCondition[]): string {
     return conditions
       .map((condition) => `${condition.metric} ${condition.operator} ${condition.threshold}`)

@@ -1,33 +1,35 @@
 <section class="fleet-page" [class.dense]="preferences.value().denseRows">
   <header class="page-heading">
-    <div>
-      <p class="eyebrow">Live operations</p>
-      <h1>Fleet</h1>
+    <div class="title-block">
+      <div class="title-row">
+        <h1>Live operations</h1>
+        <p class="service-count" aria-live="polite">{{ filteredServices().length }} services</p>
+      </div>
       <p class="subheading">Monitor health and performance across your services.</p>
     </div>
-    <p class="service-count" aria-live="polite">{{ filteredServices().length }} services</p>
+    <div class="heading-tools">
+      <div class="filters" aria-label="Fleet filters">
+        <label>
+          <span>Search services</span>
+          <input
+            type="search"
+            [value]="search()"
+            (input)="updateSearch($event)"
+            placeholder="Name, team, or ID"
+          />
+        </label>
+        <label>
+          <span>Status</span>
+          <select [value]="statusFilter()" (change)="updateStatus($event)">
+            <option value="all">All statuses</option>
+            <option value="healthy">Healthy</option>
+            <option value="degraded">Degraded</option>
+            <option value="down">Down</option>
+          </select>
+        </label>
+      </div>
+    </div>
   </header>
-
-  <div class="filters" aria-label="Fleet filters">
-    <label>
-      <span>Search services</span>
-      <input
-        type="search"
-        [value]="search()"
-        (input)="updateSearch($event)"
-        placeholder="Name, team, or ID"
-      />
-    </label>
-    <label>
-      <span>Status</span>
-      <select [value]="statusFilter()" (change)="updateStatus($event)">
-        <option value="all">All statuses</option>
-        <option value="healthy">Healthy</option>
-        <option value="degraded">Degraded</option>
-        <option value="down">Down</option>
-      </select>
-    </label>
-  </div>
 
   @if (fleet.error()) {
     <div class="error-panel" role="alert">
@@ -38,7 +40,7 @@
     <p class="loading" role="status">Loading services…</p>
   } @else {
     <div class="table-scroll">
-      <table>
+      <table class="head-table">
         <thead>
           <tr>
             <th scope="col"><button (click)="sortBy('name')">Service</button></th>

@@ -3,24 +3,29 @@
 <header class="app-header">
   <mat-toolbar>
     <span class="brand">Fleet Pulse</span>
-    <nav aria-label="Main">
-      <a
-        mat-button
-        routerLink="/"
-        routerLinkActive="active"
-        ariaCurrentWhenActive="page"
-        [routerLinkActiveOptions]="{ exact: true }"
-        >Fleet</a
-      >
-      <a mat-button routerLink="/rules" routerLinkActive="active" ariaCurrentWhenActive="page"
-        >Rules</a
-      >
-      <a mat-button routerLink="/settings" routerLinkActive="active" ariaCurrentWhenActive="page"
-        >Settings</a
-      >
-    </nav>
-    <span class="spacer"></span>
+
     @if (auth.isAuthenticated()) {
+      <nav aria-label="Main">
+        <a
+          mat-button
+          routerLink="/"
+          routerLinkActive="active"
+          ariaCurrentWhenActive="page"
+          [routerLinkActiveOptions]="{ exact: true }"
+          >Fleet</a
+        >
+        @if (auth.canEdit()) {
+          <a mat-button routerLink="/rules" routerLinkActive="active" ariaCurrentWhenActive="page"
+            >Rules</a
+          >
+        }
+        <a mat-button routerLink="/settings" routerLinkActive="active" ariaCurrentWhenActive="page"
+          >Settings</a
+        >
+      </nav>
+
+      <span class="spacer"></span>
+
       <span class="connection-state" [class]="connection.phase()" aria-live="polite">
         <span class="connection-dot" aria-hidden="true"></span>
         {{ connection.phase() === 'live' ? 'Live' : connection.phase() }}
@@ -28,6 +33,7 @@
           <span class="transport-name">· {{ connection.transport() }}</span>
         }
       </span>
+
       <button mat-button type="button" (click)="logout()">Sign out</button>
     }
   </mat-toolbar>

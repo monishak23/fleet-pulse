@@ -1,15 +1,9 @@
 <section class="rules-page">
   <header class="page-heading">
     <div>
-      <p class="eyebrow">Detection</p>
       <h1>Alert rules</h1>
       <p>Define metric thresholds and review active incidents.</p>
     </div>
-    @if (auth.canEdit()) {
-      <button type="button" class="secondary" (click)="enableNotifications()">
-        Enable browser notifications
-      </button>
-    }
   </header>
 
   @if (error() || monitor.error()) {

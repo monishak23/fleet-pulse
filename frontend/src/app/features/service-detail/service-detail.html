@@ -3,8 +3,8 @@
   @if (service(); as current) {
     <header class="detail-heading">
       <div>
-        <p class="eyebrow">{{ current.team }} · {{ current.id }}</p>
         <h1>{{ current.name }}</h1>
+        <p class="eyebrow">{{ current.team }} · {{ current.id }}</p>
       </div>
       <span class="status" [class]="current.status">{{ current.status }}</span>
     </header>
@@ -31,17 +31,10 @@
       <header>
         <div>
           <h2>Metric history</h2>
-          <p>Recent history · up to 300 displayed points</p>
+          <p>Last {{ historyMinutes }} minutes · up to {{ maxPoints }} points per chart</p>
         </div>
-        <label>
-          <span>Metric</span>
-          <select [value]="metric()" (change)="selectMetric($event)">
-            <option value="p95">P95 latency</option>
-            <option value="errRate">Error rate</option>
-            <option value="rps">Requests per second</option>
-          </select>
-        </label>
       </header>
+      <br>
       @if (error()) {
         <div class="error-panel" role="alert">
           <p>{{ error() }}</p>
@@ -50,22 +43,25 @@
       } @else if (loading()) {
         <p role="status">Loading history…</p>
       } @else {
-        @defer (on viewport) {
-          <svg
-            class="chart"
-            viewBox="0 0 1000 220"
-            role="img"
-            [attr.aria-label]="metric() + ' history chart'"
-          >
-            <path class="axis" d="M 0 20 V 190 H 1000" />
-            <path class="line" [attr.d]="chartPath()" />
-          </svg>
-          <p class="chart-caption">
-            {{ history().length }} points across the configured history window
-          </p>
-        } @placeholder {
-          <div class="chart-placeholder" aria-hidden="true">Chart will load when visible</div>
-        }
+        <div class="charts">
+          @for (chart of charts(); track chart.panel.key) {
+            <figure class="chart-card">
+              <figcaption>{{ chart.panel.title }} ({{ chart.panel.unit }})</figcaption>
+              <div class="chart-box" role="img" [attr.aria-label]="chart.label">
+                <ngx-charts-line-chart
+                  [results]="chart.results"
+                  [scheme]="chart.panel.scheme"
+                  [xAxis]="true"
+                  [yAxis]="true"
+                  [legend]="false"
+                  [animations]="false"
+                  [xAxisTickFormatting]="formatTime"
+                />
+              </div>
+            </figure>
+          }
+        </div>
+        <p class="chart-caption">{{ history().length }} points across the configured history window</p>
       }
     </section>
   } @else if (fleet.loading()) {

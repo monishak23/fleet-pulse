@@ -38,14 +38,17 @@
   &.healthy {
     background: #e1f4e8;
     color: #176b35;
+    border: 1px solid #176b35;
   }
   &.degraded {
     background: #fff0cf;
     color: #754d00;
+    border: 1px solid #754d00;
   }
   &.down {
     background: #ffe3e0;
     color: #9b241c;
+    border: 1px solid #9b241c;
   }
 }
 
@@ -81,55 +84,22 @@
   }
 }
 
-.history-panel {
-  padding: 1.25rem;
-  border: 1px solid var(--mat-sys-outline-variant);
-  border-radius: 0.65rem;
-}
-
-.history-panel > header {
-  margin-bottom: 1rem;
-}
-
-.history-panel label {
+.charts {
   display: grid;
-  gap: 0.25rem;
+  gap: 1.25rem;
 }
 
-.history-panel select {
-  padding: 0.5rem;
-  color: inherit;
-  background: var(--mat-sys-surface);
+.chart-card {
+  margin: 0;
+
+  figcaption {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
 }
 
-.chart {
-  width: 100%;
-  min-height: 180px;
-}
-
-.axis {
-  fill: none;
-  stroke: var(--mat-sys-outline-variant);
-}
-
-.line {
-  fill: none;
-  stroke: var(--mat-sys-primary);
-  stroke-width: 3;
-  vector-effect: non-scaling-stroke;
-}
-
-.chart-caption {
-  color: var(--mat-sys-on-surface-variant);
-  font-size: 0.85rem;
-}
-
-.chart-placeholder {
-  display: grid;
-  min-height: 220px;
-  place-items: center;
-  background: var(--mat-sys-surface-container);
-  color: var(--mat-sys-on-surface-variant);
+.chart-box {
+  height: 240px; // ngx-charts fills its parent, so the parent needs a height
 }
 
 .error-panel {
