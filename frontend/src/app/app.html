@@ -20,7 +20,16 @@
       >
     </nav>
     <span class="spacer"></span>
-    <!-- connection status indicator goes here in chunk 22 -->
+    @if (auth.isAuthenticated()) {
+      <span class="connection-state" [class]="connection.phase()" aria-live="polite">
+        <span class="connection-dot" aria-hidden="true"></span>
+        {{ connection.phase() === 'live' ? 'Live' : connection.phase() }}
+        @if (connection.transport()) {
+          <span class="transport-name">· {{ connection.transport() }}</span>
+        }
+      </span>
+      <button mat-button type="button" (click)="logout()">Sign out</button>
+    }
   </mat-toolbar>
 </header>
 

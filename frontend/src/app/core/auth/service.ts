@@ -22,8 +22,11 @@ export class AuthService {
   private readonly settings = inject(APP_SETTINGS);
 
   private readonly ended = new Subject<void>();
+  private readonly started = new Subject<void>();
   /** Emits when the session ends. In-flight requests and the stream listen to it. */
   readonly sessionEnded$ = this.ended.asObservable();
+  /** Emits after a successful login or token refresh. */
+  readonly sessionStarted$ = this.started.asObservable();
 
   // Tokens live in memory only. A page reload means signing in again.
   private readonly session = signal<Session | null>(null);
@@ -109,5 +112,6 @@ export class AuthService {
       expiresAt: Date.now() + res.expiresIn * 1000,
       user: res.user,
     });
+    this.started.next();
   }
 }

@@ -50,3 +50,46 @@ nav a {
 nav a.active {
   background: color-mix(in srgb, var(--mat-sys-on-primary) 18%, transparent);
 }
+
+.connection-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0.75rem;
+  font-size: 0.85rem;
+  text-transform: capitalize;
+}
+
+.connection-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: #a96b00;
+}
+
+.connection-state.live .connection-dot {
+  background: #47b86c;
+}
+
+.connection-state.reconnecting .connection-dot {
+  background: #d18400;
+}
+
+.transport-name {
+  opacity: 0.8;
+}
+
+@media (max-width: 720px) {
+  .connection-state {
+    margin: 0 0.25rem;
+    font-size: 0.7rem;
+  }
+
+  .transport-name {
+    display: none;
+  }
+
+  nav {
+    margin-left: 0.5rem;
+  }
+}
