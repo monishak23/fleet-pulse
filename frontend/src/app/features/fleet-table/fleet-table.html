@@ -1,1 +1,86 @@
-<p>fleet-table works!</p>
+<section class="fleet-page" [class.dense]="preferences.value().denseRows">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">Live operations</p>
+      <h1>Fleet</h1>
+      <p class="subheading">Monitor health and performance across your services.</p>
+    </div>
+    <p class="service-count" aria-live="polite">{{ filteredServices().length }} services</p>
+  </header>
+
+  <div class="filters" aria-label="Fleet filters">
+    <label>
+      <span>Search services</span>
+      <input
+        type="search"
+        [value]="search()"
+        (input)="updateSearch($event)"
+        placeholder="Name, team, or ID"
+      />
+    </label>
+    <label>
+      <span>Status</span>
+      <select [value]="statusFilter()" (change)="updateStatus($event)">
+        <option value="all">All statuses</option>
+        <option value="healthy">Healthy</option>
+        <option value="degraded">Degraded</option>
+        <option value="down">Down</option>
+      </select>
+    </label>
+  </div>
+
+  @if (fleet.error()) {
+    <div class="error-panel" role="alert">
+      <p>{{ fleet.error() }}</p>
+      <button type="button" (click)="retry()">Retry</button>
+    </div>
+  } @else if (fleet.loading() && !fleet.services().length) {
+    <p class="loading" role="status">Loading services…</p>
+  } @else {
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col"><button (click)="sortBy('name')">Service</button></th>
+            <th scope="col"><button (click)="sortBy('team')">Team</button></th>
+            <th scope="col"><button (click)="sortBy('status')">Status</button></th>
+            <th scope="col"><button (click)="sortBy('p95')">P95 latency</button></th>
+            <th scope="col"><button (click)="sortBy('errRate')">Error rate</button></th>
+            <th scope="col"><button (click)="sortBy('rps')">Requests/s</button></th>
+          </tr>
+        </thead>
+      </table>
+      <cdk-virtual-scroll-viewport
+        class="service-viewport"
+        [itemSize]="rowHeight"
+        [minBufferPx]="rowHeight * 8"
+        [maxBufferPx]="rowHeight * 16"
+        aria-label="Services"
+      >
+        <table>
+          <tbody>
+            <tr
+              *cdkVirtualFor="let service of filteredServices(); trackBy: trackService"
+              [class.status-flash]="fleet.flashing().has(service.id)"
+            >
+              <td>
+                <a [routerLink]="['/services', service.id]">{{ service.name }}</a>
+                <small>{{ service.id }}</small>
+              </td>
+              <td>{{ service.team }}</td>
+              <td>
+                <span class="status" [class]="service.status">{{ service.status }}</span>
+              </td>
+              <td>{{ service.p95 | number: '1.0-0' }} ms</td>
+              <td>{{ service.errRate | number: '1.1-1' }}%</td>
+              <td>{{ service.rps | number: '1.0-0' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </cdk-virtual-scroll-viewport>
+    </div>
+    @if (!filteredServices().length) {
+      <p class="empty-state">No services match these filters.</p>
+    }
+  }
+</section>
