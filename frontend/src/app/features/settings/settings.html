@@ -1,0 +1,53 @@
+<section class="settings-page">
+  <h1>Settings</h1>
+  <p class="intro">These preferences are saved in this browser only.</p>
+  @if (preferences.error()) {
+    <p class="error" role="alert">{{ preferences.error() }}</p>
+  }
+
+  <form #settingsForm="ngForm" (ngSubmit)="save()">
+    <label class="setting-row">
+      <span>
+        <strong>Compact fleet rows</strong>
+        <small>Show more services in the virtualized fleet table.</small>
+      </span>
+      <input type="checkbox" name="denseRows" [(ngModel)]="draft.denseRows" />
+    </label>
+
+    <label class="setting-row">
+      <span>
+        <strong>Browser notifications</strong>
+        <small
+          >Show notifications when an alert rule becomes active. Grant permission on the Rules
+          page.</small
+        >
+      </span>
+      <input type="checkbox" name="notificationsEnabled" [(ngModel)]="draft.notificationsEnabled" />
+    </label>
+
+    <label class="setting-row">
+      <span>
+        <strong>Stale data threshold</strong>
+        <small>Mark a service's metrics as stale after this many seconds without updates.</small>
+      </span>
+      <span class="number-input">
+        <input
+          type="number"
+          name="staleAfterSeconds"
+          [(ngModel)]="draft.staleAfterSeconds"
+          min="1"
+          max="60"
+          required
+        />
+        <span>seconds</span>
+      </span>
+    </label>
+
+    <div class="actions">
+      <button type="submit" [disabled]="settingsForm.invalid">Save preferences</button>
+      @if (saved) {
+        <span role="status">Preferences saved.</span>
+      }
+    </div>
+  </form>
+</section>

@@ -54,7 +54,7 @@ This starts the frontend and backend together.
 
 - Frontend docs: [frontend/README.md](./frontend/README.md)
 - Backend docs: [backend/README.md](./backend/README.md)
-- Local drill guide: [LOCAL_DRILLS.md](./LOCAL_DRILLS.md)
+
 
 ## Architecture overview
 

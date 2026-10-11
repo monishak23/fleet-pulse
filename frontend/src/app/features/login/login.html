@@ -1,0 +1,43 @@
+<div class="login-page">
+  <mat-card class="login-card">
+    <div color="primary" class="login-header">
+      <span>Login Page</span>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <mat-form-field appearance="fill">
+        <mat-label>Username</mat-label>
+        <input
+          matInput
+          type="email"
+          formControlName="email"
+          placeholder="Username"
+          autocomplete="username"
+        />
+        @if (form.controls.email.hasError('required')) {
+          <mat-error>Email is required</mat-error>
+        } @else if (form.controls.email.hasError('email')) {
+          <mat-error>Enter a valid email address</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Password</mat-label>
+        <input
+          matInput
+          type="password"
+          formControlName="password"
+          placeholder="Password"
+          autocomplete="current-password"
+        />
+        @if (form.controls.password.hasError('required')) {
+          <mat-error>Password is required</mat-error>
+        }
+      </mat-form-field>
+
+      <button mat-flat-button color="primary" type="submit" [disabled]="pending()">
+        {{ pending() ? 'Signing in…' : 'Login' }}
+      </button>
+    </form>
+  </mat-card>
+</div>
