@@ -1,0 +1,75 @@
+<section class="detail-page">
+  <a class="back-link" routerLink="/">← Back to fleet</a>
+  @if (service(); as current) {
+    <header class="detail-heading">
+      <div>
+        <h1>{{ current.name }}</h1>
+        <p class="eyebrow">{{ current.team }} · {{ current.id }}</p>
+      </div>
+      <span class="status" [class]="current.status">{{ current.status }}</span>
+    </header>
+
+    @if (stale()) {
+      <p class="stale-notice" role="status">
+        Metric data is stale. Last update {{ current.ts | date: 'mediumTime' }}.
+      </p>
+    }
+
+    <section class="metric-cards" aria-label="Current service metrics">
+      <article>
+        <span>P95 latency</span><strong>{{ current.p95 | number: '1.0-0' }} ms</strong>
+      </article>
+      <article>
+        <span>Error rate</span><strong>{{ current.errRate | number: '1.1-1' }}%</strong>
+      </article>
+      <article>
+        <span>Requests per second</span><strong>{{ current.rps | number: '1.0-0' }}</strong>
+      </article>
+    </section>
+
+    <section class="history-panel">
+      <header>
+        <div>
+          <h2>Metric history</h2>
+          <p>Last {{ historyMinutes }} minutes · up to {{ maxPoints }} points per chart</p>
+        </div>
+      </header>
+      <br>
+      @if (error()) {
+        <div class="error-panel" role="alert">
+          <p>{{ error() }}</p>
+          <button type="button" (click)="retry()">Retry</button>
+        </div>
+      } @else if (loading()) {
+        <p role="status">Loading history…</p>
+      } @else {
+        <div class="charts">
+          @for (chart of charts(); track chart.panel.key) {
+            <figure class="chart-card">
+              <figcaption>{{ chart.panel.title }} ({{ chart.panel.unit }})</figcaption>
+              <div class="chart-box" role="img" [attr.aria-label]="chart.label">
+                <ngx-charts-line-chart
+                  [results]="chart.results"
+                  [scheme]="chart.panel.scheme"
+                  [xAxis]="true"
+                  [yAxis]="true"
+                  [legend]="false"
+                  [animations]="false"
+                  [xAxisTickFormatting]="formatTime"
+                />
+              </div>
+            </figure>
+          }
+        </div>
+        <p class="chart-caption">{{ history().length }} points across the configured history window</p>
+      }
+    </section>
+  } @else if (fleet.loading()) {
+    <p role="status">Loading service…</p>
+  } @else {
+    <section class="error-panel" role="alert">
+      <h1>Service not found</h1>
+      <p>This service is not available in the current fleet.</p>
+    </section>
+  }
+</section>

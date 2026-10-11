@@ -1,0 +1,84 @@
+:host {
+  display: block;
+}
+
+/* Centers the card in the space below the app toolbar */
+.login-page {
+  display: grid;
+  place-items: center;
+  min-height: calc(100dvh - 8rem);
+}
+
+.login-card {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 26rem;
+  padding: 1.1rem 1.1rem 1.5rem;
+}
+
+/* Header band in the primary color */
+.login-header {
+  display: flex;
+  align-items: center;      /* vertically center the title */
+  box-sizing: border-box;
+  height: 4.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0 1.1rem;
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1.2;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+
+  --mat-toolbar-standard-height: 4.5rem;
+  --mat-toolbar-mobile-height: 4.5rem;
+}
+
+@media (max-width: 720px) {
+  .login-header {
+    height: 4rem;
+    font-size: 1.35rem;
+
+    --mat-toolbar-standard-height: 4rem;
+    --mat-toolbar-mobile-height: 4rem;
+  }
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Underline-style fields on a plain background, as in the screenshot */
+mat-form-field {
+  width: 100%;
+  --mat-form-field-filled-container-color: transparent;
+  --mat-form-field-filled-hover-state-layer-opacity: 0;
+  --mat-form-field-filled-focus-state-layer-opacity: 0;
+  --mdc-filled-text-field-container-color: transparent;
+}
+
+button[mat-flat-button] {
+  width: 100%;
+  height: 2.5rem;
+  margin-top: 0.75rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .login-page {
+    min-height: calc(100dvh - 6rem);
+  }
+
+  .login-card {
+    padding: 0.75rem 0.75rem 1.25rem;
+  }
+
+  .login-header {
+    height: 4rem;
+    font-size: 1.35rem;
+  }
+}
