@@ -5,7 +5,7 @@ import { APP_SETTINGS } from '../config/app-settings';
 import { ConnectionManager } from '../stream/connection-manager';
 import { MetricEvent, ServiceStatus, SnapshotResponse } from '../stream/model';
 
-export interface FleetService {
+export interface Fleets {
   id: string;
   name: string;
   team: string;
@@ -17,16 +17,16 @@ export interface FleetService {
   seq: number;
 }
 
-type ServicesResponse = Omit<FleetService, 'p95' | 'errRate' | 'rps' | 'ts' | 'seq'>;
+type ServicesResponse = Omit<Fleets, 'p95' | 'errRate' | 'rps' | 'ts' | 'seq'>;
 
 @Injectable({ providedIn: 'root' })
-export class FleetStore {
+export class FleetService {
   private readonly http = inject(HttpClient);
   private readonly settings = inject(APP_SETTINGS);
   private readonly connection = inject(ConnectionManager);
   private initialized = false;
 
-  private readonly _services = signal<readonly FleetService[]>([]);
+  private readonly _services = signal<readonly Fleets[]>([]);
   readonly services = this._services.asReadonly();
   private readonly metricSubject = new Subject<readonly MetricEvent[]>();
   readonly metrics$ = this.metricSubject.asObservable();
@@ -82,7 +82,7 @@ export class FleetStore {
     this.initialize();
   }
 
-  private combine(service: ServicesResponse, metric: MetricEvent | undefined): FleetService {
+  private combine(service: ServicesResponse, metric: MetricEvent | undefined): Fleets {
     return {
       ...service,
       status: metric?.status ?? service.status,

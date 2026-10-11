@@ -10,12 +10,12 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FleetService, FleetStore } from '../../core/fleet/fleet-store';
+import { Fleets, FleetService } from '../../core/fleet/fleet-service';
 import { UiPreferencesService } from '../../core/preferences/ui-preferences';
 import { RuleMonitor } from '../../core/rules/rule-api';
 
 type SortKey = 'name' | 'team' | 'status' | 'p95' | 'errRate' | 'rps';
-type StatusFilter = 'all' | FleetService['status'];
+type StatusFilter = 'all' | Fleets['status'];
 
 @Component({
   imports: [CommonModule, ScrollingModule, RouterLink],
@@ -28,14 +28,14 @@ export class FleetTable {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
-  protected readonly fleet = inject(FleetStore);
+  protected readonly fleet = inject(FleetService);
   protected readonly preferences = inject(UiPreferencesService);
   private readonly ruleMonitor = inject(RuleMonitor);
   protected readonly search = signal('');
   protected readonly statusFilter = signal<StatusFilter>('all');
   protected readonly sortKey = signal<SortKey>('name');
   protected readonly sortDirection = signal<'asc' | 'desc'>('asc');
-  protected readonly trackService = (_index: number, service: FleetService): string => service.id;
+  protected readonly trackService = (_index: number, service: Fleets): string => service.id;
   protected readonly filteredServices = computed(() => {
     const query = this.search().trim().toLocaleLowerCase();
     const status = this.statusFilter();

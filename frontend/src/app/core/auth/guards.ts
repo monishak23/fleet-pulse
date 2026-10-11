@@ -2,13 +2,6 @@ import { inject } from '@angular/core';
 import { CanActivateFn, CanDeactivateFn, Router } from '@angular/router';
 import { AuthService } from './service';
 
-export const unsavedChangesGuard: CanDeactivateFn<{
-  canDeactivate: () => boolean;
-}> = (component) => {
-  const auth = inject(AuthService);
-  return !auth.isAuthenticated() || component.canDeactivate();
-};
-
 export const authGuard: CanActivateFn = (_route, state) => {
   const auth = inject(AuthService);
   return auth.isAuthenticated()
@@ -26,4 +19,11 @@ export const operatorGuard: CanActivateFn = (_route, state) => {
     });
   }
   return auth.canEdit() ? true : inject(Router).createUrlTree(['/']);
+};
+
+export const unsavedChangesGuard: CanDeactivateFn<{
+  canDeactivate: () => boolean;
+}> = (component) => {
+  const auth = inject(AuthService);
+  return !auth.isAuthenticated() || component.canDeactivate();
 };

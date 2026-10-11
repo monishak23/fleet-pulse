@@ -10,7 +10,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { APP_SETTINGS } from '../../core/config/app-settings';
-import { FleetStore } from '../../core/fleet/fleet-store';
+import { FleetService } from '../../core/fleet/fleet-service';
 import { UiPreferencesService } from '../../core/preferences/ui-preferences';
 import { RuleMonitor } from '../../core/rules/rule-api';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -37,7 +37,7 @@ export class ServiceDetail {
   private readonly route = inject(ActivatedRoute);
   private readonly settings = inject(APP_SETTINGS);
   private readonly destroyRef = inject(DestroyRef);
-  protected readonly fleet = inject(FleetStore);
+  protected readonly fleet = inject(FleetService);
   protected readonly preferences = inject(UiPreferencesService);
   private readonly ruleMonitor = inject(RuleMonitor);
   private readonly historyRequests = new Subject<string>();

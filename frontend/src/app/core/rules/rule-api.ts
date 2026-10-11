@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { APP_SETTINGS } from '../config/app-settings';
-import { FleetStore } from '../fleet/fleet-store';
+import { FleetService } from '../fleet/fleet-service';
 import { UiPreferencesService } from '../preferences/ui-preferences';
 import { MetricEvent } from '../stream/model';
 import { AuthService } from '../auth/service';
@@ -36,7 +36,7 @@ export class RuleApi {
 @Injectable({ providedIn: 'root' })
 export class RuleMonitor {
   private readonly api = inject(RuleApi);
-  private readonly fleet = inject(FleetStore);
+  private readonly fleet = inject(FleetService);
   private readonly auth = inject(AuthService);
   private readonly preferences = inject(UiPreferencesService);
   private readonly _rules = signal<readonly AlertRule[]>([]);

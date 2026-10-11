@@ -11,22 +11,6 @@ export interface ApiErrorBody {
     };
 }
 
-export function describeHttpError(err: unknown): string {
-    if (isSessionEnded(err)) {
-        return 'Your session has ended. Please sign in again.';
-    }
-    if (err instanceof HttpErrorResponse) {
-        if (err.status === 0) {
-            return 'Cannot reach the server. Check your connection and try again.';
-        }
-        const body = err.error as ApiErrorBody | null;
-        if (body?.error?.message) {
-            return body.error.message;
-        }
-    }
-    return 'Something went wrong. Please try again.';
-}
-
 export function apiErrorCode(err: unknown): string | null {
   if (err instanceof HttpErrorResponse) {
     const body = err.error as ApiErrorBody | null;

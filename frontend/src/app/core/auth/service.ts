@@ -23,15 +23,11 @@ export class AuthService {
 
   private readonly ended = new Subject<void>();
   private readonly started = new Subject<void>();
-  /** Emits when the session ends. In-flight requests and the stream listen to it. */
+
   readonly sessionEnded$ = this.ended.asObservable();
-  /** Emits after a successful login or token refresh. */
   readonly sessionStarted$ = this.started.asObservable();
 
-  // Tokens live in memory only. A page reload means signing in again.
   private readonly session = signal<Session | null>(null);
-
-  // The refresh request currently running, shared by every caller (single-flight)
   private refreshInFlight$: Observable<string> | null = null;
 
   readonly user = computed<User | null>(() => this.session()?.user ?? null);
@@ -39,10 +35,21 @@ export class AuthService {
   readonly role = computed(() => this.user()?.role ?? null);
   readonly canEdit = computed(() => this.role() === 'operator');
 
+  /**
+   * Getter to get access token
+   */
   get accessToken(): string | null {
     return this.session()?.accessToken ?? null;
   }
 
+
+  /**
+   * Login to the app
+   *  
+   * @param email User's email
+   * @param password User's password
+   * @returns Observable that emits the logged-in user on success, or an error on failure.
+   */
   login(email: string, password: string): Observable<User> {
     return this.http
       .post<AuthResponse>(`${this.settings.api.baseUrl}/auth/login`, { email, password })
@@ -52,7 +59,11 @@ export class AuthService {
       );
   }
 
-  /** Returns the new access token. Concurrent callers share ONE network request. */
+  /**
+   * Refresh the access token using the refresh token.
+   * 
+   * @returns Observable that emits the new access token on success, or an error on failure.
+   */
   refresh(): Observable<string> {
     if (this.refreshInFlight$) {
       return this.refreshInFlight$;
@@ -67,23 +78,26 @@ export class AuthService {
         refreshToken: current.refreshToken,
       })
       .pipe(
-        tap((res) => this.applySession(res)), // the refresh token rotates, so store the new one
+        tap((res) => this.applySession(res)),
         map((res) => res.accessToken),
         catchError((err: unknown) => {
-          // Only a rejected refresh token ends the session.
-          // Network errors and 5xx keep it, so the app can recover later.
           if (err instanceof HttpErrorResponse && err.status === 401) {
             this.endSession();
           }
           return throwError(() => err);
         }),
-        finalize(() => (this.refreshInFlight$ = null)), // next expiry starts a fresh refresh
+        finalize(() => (this.refreshInFlight$ = null)),
         shareReplay({ bufferSize: 1, refCount: false }),
       );
     return this.refreshInFlight$;
   }
 
-  /** A token that stays valid for at least `marginMs`. Refreshes first if it is about to expire. */
+  /**
+   * Ensure that the access token is fresh, refreshing it if necessary.
+   * 
+   * @param marginMs The margin in milliseconds before the token expires to consider it "fresh".
+   * @returns Observable that emits the access token, either the current one if it's fresh enough, or a new one if it was refreshed.
+   */
   ensureFreshToken(marginMs: number): Observable<string> {
     const current = this.session();
     if (!current) {
@@ -92,19 +106,29 @@ export class AuthService {
     return current.expiresAt - Date.now() > marginMs ? of(current.accessToken) : this.refresh();
   }
 
-  /** The server rejected our credentials: clear everything and go to login. */
+  /**
+   * End the current session, clearing the stored tokens and user info, and navigating to the login page.
+   */
   endSession(): void {
-    if (!this.session()) return; // already ended, so emit only once
+    if (!this.session()) return; 
     this.session.set(null);
     this.refreshInFlight$ = null;
     this.ended.next();
     void this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
   }
 
+  /**
+   * Logout the user, ending the session.
+   */
   logout(): void {
     this.endSession();
   }
 
+  /**
+   * Store the auth token
+   * 
+   * @param res The response from the server containing the access token, refresh token, and user info.
+   */
   private applySession(res: AuthResponse): void {
     this.session.set({
       accessToken: res.accessToken,

@@ -90,4 +90,4 @@ From the repository root:
 docker compose up --build
 ```
 
-Open `http://localhost:8080`. The frontend container serves the Angular app through Nginx, and the API remains available at `http://localhost:4000` to the browser. Stop the stack with `docker compose down`.
+The frontend container serves the Angular app through Nginx, and the API remains available at `http://localhost:4000` to the browser. Stop the stack with `docker compose down`.
